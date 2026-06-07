@@ -1,0 +1,43 @@
+@model TeacherResponse
+@{
+    var teacherUserId = AuthSession.UserId(Context, UserRole.Teacher);
+    var isTeacher = teacherUserId is not null;
+    var isStudent = AuthSession.UserId(Context, UserRole.Student) is not null && !isTeacher;
+    var isOwnProfile = teacherUserId == Model.UserId;
+}
+
+<div class="card teacher-card h-100">
+    <div class="card-body d-flex flex-column gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <img src="@Model.AvatarUrl" alt="" class="avatar" />
+            <div>
+                <h5 class="card-title mb-1">@Model.Name</h5>
+                <div class="text-secondary small">@Model.Skill</div>
+            </div>
+        </div>
+        <p class="card-text text-secondary flex-grow-1">@Model.Description</p>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge text-bg-success">@UiText.T(Context, Model.TeachingMode.ToString())</span>
+            <span class="badge rating-badge"><span class="rating-star">⭐</span> @Model.Rating.ToString("0.0")</span>
+        </div>
+        <div class="fw-bold">@Model.PricePerSession.ToString("N0")đ @UiText.T(Context, "PerSession")</div>
+        <div class="d-grid gap-2">
+            @if (isOwnProfile)
+            {
+                <a asp-controller="TeacherDashboard" asp-action="Index" class="btn btn-primary">@UiText.T(Context, "EditProfile")</a>
+            }
+            else
+            {
+                <a asp-controller="Teachers" asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-light">@(isTeacher ? UiText.T(Context, "ViewProfile") : UiText.T(Context, "Details"))</a>
+            }
+            @if (isStudent)
+            {
+                <form asp-controller="Bookings" asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="teacherProfileId" value="@Model.Id" />
+                    <button class="btn btn-primary w-100">@UiText.T(Context, "BookSession")</button>
+                </form>
+            }
+        </div>
+    </div>
+</div>

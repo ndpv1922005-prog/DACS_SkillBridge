@@ -1,0 +1,13 @@
+bin/
+obj/
+
+backend/bin/
+backend/obj/
+
+.chrome-test/
+.chrome-test2/
+.chrome-test3/
+.chrome-test4/
+.codex-temp/
+
+backend/wwwroot/uploads/

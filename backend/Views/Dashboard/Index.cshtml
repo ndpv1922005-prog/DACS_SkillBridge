@@ -1,0 +1,228 @@
+@model StudentDashboardViewModel
+@{
+    ViewData["Title"] = UiText.T(Context, "StudentDashboard");
+    var bookings = Model.Bookings.OrderByDescending(booking => booking.StartTime).ToList();
+    var paidBookings = bookings
+        .Where(booking => booking.Status is BookingStatus.Paid or BookingStatus.InProgress or BookingStatus.Completed or BookingStatus.Refunded)
+        .ToList();
+    var invoices = Model.Invoices.ToList();
+    var walletHistory = Model.WalletTransactions.OrderByDescending(item => item.CreatedAt).ToList();
+    var completedBookings = bookings.Where(booking => booking.Status == BookingStatus.Completed).ToList();
+    var activeTeacherIds = bookings.Select(booking => booking.TeacherId).Distinct().ToList();
+    var activeTeachers = Model.Teachers.Where(teacher => activeTeacherIds.Contains(teacher.UserId)).ToList();
+}
+
+<div class="teacher-shell student-dashboard-shell">
+    <aside class="teacher-sidebar student-sidebar">
+        <div class="auth-icon mb-3">@((Model.Profile.DisplayName ?? "S").Trim().FirstOrDefault())</div>
+        <h1 class="h4 mb-1">@Model.Profile.DisplayName</h1>
+        <p class="text-secondary small mb-4">@UiText.T(Context, "StudentSubtitle")</p>
+        <nav class="vstack gap-2">
+            <a href="#overview" class="teacher-side-link">@UiText.T(Context, "Overview")</a>
+            <a href="#profile" class="teacher-side-link">@UiText.T(Context, "PersonalProfile")</a>
+            <a href="#payments" class="teacher-side-link">@UiText.T(Context, "Payment")</a>
+            <a asp-controller="Chat" asp-action="Support" class="teacher-side-link">Liên hệ hỗ trợ</a>
+        </nav>
+    </aside>
+
+    <div class="teacher-main student-main">
+        @if (!string.IsNullOrWhiteSpace(Model.Success))
+        {
+            <div class="alert alert-success">@Model.Success</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Error))
+        {
+            <div class="alert alert-danger">@Model.Error</div>
+        }
+
+        <section id="overview" class="mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                <div>
+                    <p class="text-uppercase text-success fw-bold small mb-1">@UiText.T(Context, "StudentSubtitle")</p>
+                    <h2 class="h3 mb-1">@UiText.T(Context, "StudentDashboard")</h2>
+                    <p class="text-secondary mb-0">@UiText.T(Context, "StudentDashboardShortText")</p>
+                </div>
+            </div>
+
+            <div class="student-dashboard-stat-grid">
+                <div class="stat-card p-3"><span>@UiText.T(Context, "BookedSessions")</span><strong>@bookings.Count</strong></div>
+                <div class="stat-card p-3"><span>@UiText.T(Context, "CompletedLessons")</span><strong>@completedBookings.Count</strong></div>
+                <div class="stat-card p-3"><span>@UiText.T(Context, "ActiveTeachers")</span><strong>@activeTeachers.Count</strong></div>
+                <div class="stat-card p-3"><span>@UiText.T(Context, "HeldMoney")</span><strong>@Model.TotalHeld.ToString("N0")đ</strong></div>
+            </div>
+        </section>
+
+        <section id="profile" class="card mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">@UiText.T(Context, "CreateUpdateStudentProfile")</h2>
+                        <p class="text-secondary mb-0">@UiText.T(Context, "StudentProfileText")</p>
+                    </div>
+                </div>
+
+                <form asp-action="Profile" method="post" enctype="multipart/form-data" class="row g-3">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Profile.AvatarUrl" name="AvatarUrl" />
+                    <div class="col-md-4">
+                        <label class="form-label">@UiText.T(Context, "Avatar")</label>
+                        <div class="student-avatar-upload">
+                            <img src="@Model.Profile.AvatarUrl" alt="" data-student-avatar-preview />
+                            <input class="form-control" type="file" name="avatarFile" accept="image/*" data-student-avatar-input />
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">@UiText.T(Context, "DisplayName")</label>
+                                <input class="form-control" asp-for="Profile.DisplayName" name="DisplayName" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">@UiText.T(Context, "Gender")</label>
+                                <input class="form-control" asp-for="Profile.Gender" name="Gender" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">@UiText.T(Context, "BirthDate")</label>
+                                <input class="form-control" asp-for="Profile.BirthDate" name="BirthDate" type="date" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">@UiText.T(Context, "Email")</label>
+                                <input class="form-control" asp-for="Profile.Email" name="Email" type="email" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">@UiText.T(Context, "Phone")</label>
+                                <input class="form-control" asp-for="Profile.Phone" name="Phone" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">@UiText.T(Context, "LearningGoal")</label>
+                                <input class="form-control" asp-for="Profile.LearningGoal" name="LearningGoal" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">@UiText.T(Context, "SelfDescription")</label>
+                                <textarea class="form-control" asp-for="Profile.Bio" name="Bio" rows="4"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end">
+                        <button class="btn btn-primary btn-lg">@UiText.T(Context, "SaveStudentProfile")</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section id="payments" class="card">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">@UiText.T(Context, "PaymentOverview")</h2>
+                        <p class="text-secondary mb-0">@UiText.T(Context, "PaymentOverviewText")</p>
+                    </div>
+                    <a class="btn lesson-action-btn" asp-controller="Wallet" asp-action="Deposit">Nạp tiền</a>
+                </div>
+
+                <div class="student-dashboard-stat-grid mb-4">
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "AccountBalance")</span><strong>@Model.WalletBalance.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "HeldMoney")</span><strong>@Model.TotalHeld.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "TotalStudentPaid")</span><strong>@Model.TotalPaid.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "RefundedMoney")</span><strong>@Model.TotalRefunded.ToString("N0")đ</strong></div>
+                </div>
+
+                <h3 class="h5 mb-3">@UiText.T(Context, "PaymentHistory")</h3>
+                @if (!walletHistory.Any())
+                {
+                    <div class="empty-state">@UiText.T(Context, "NoPaymentHistory")</div>
+                }
+                else
+                {
+                    <div class="table-responsive student-payment-table">
+                        <table class="table table-dark table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Loại giao dịch</th>
+                                    <th>Phương thức</th>
+                                    <th>@UiText.T(Context, "Amount")</th>
+                                    <th>Trạng thái</th>
+                                    <th>Mã giao dịch</th>
+                                    <th class="text-end">Hóa đơn</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                        @foreach (var transaction in walletHistory.Take(10))
+                        {
+                            var invoice = transaction.BookingId is null ? null : invoices.FirstOrDefault(item => item.BookingId == transaction.BookingId);
+                            var invoiceModalId = invoice is null ? "" : $"invoice-{invoice.Id:N}";
+                            <tr>
+                                <td>@transaction.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@WalletTypeLabel(transaction.Type)</td>
+                                <td>@transaction.Method</td>
+                                <td>@transaction.Amount.ToString("N0")đ</td>
+                                <td><span class="badge text-bg-info">@transaction.Status</span></td>
+                                <td>@(string.IsNullOrWhiteSpace(transaction.TransactionCode) ? transaction.Id.ToString("N")[..10].ToUpperInvariant() : transaction.TransactionCode)</td>
+                                <td class="text-end">
+                                    @if (invoice is not null)
+                                    {
+                                        <button class="btn btn-sm lesson-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#@invoiceModalId">Xem hóa đơn</button>
+                                    }
+                                </td>
+                            </tr>
+                            @if (invoice is not null)
+                            {
+                                var teacher = Model.Teachers.FirstOrDefault(item => item.UserId == invoice.TeacherId);
+                                <tr class="d-none"><td colspan="7">
+                                    <div class="modal fade" id="@invoiceModalId" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content complaint-modal">
+                                                <div class="modal-header border-secondary-subtle">
+                                                    <div>
+                                                        <h2 class="modal-title h5">Hóa đơn thanh toán</h2>
+                                                        <p class="text-secondary small mb-0">@invoice.InvoiceCode</p>
+                                                    </div>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="invoice-detail-grid">
+                                                        <span>Mã hóa đơn</span><strong>@invoice.InvoiceCode</strong>
+                                                        <span>Ngày thanh toán</span><strong>@invoice.PaidAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</strong>
+                                                        <span>Học sinh</span><strong>@Model.Profile.DisplayName</strong>
+                                                        <span>Giáo viên</span><strong>@(teacher?.Name ?? "Giáo viên")</strong>
+                                                        <span>Nội dung buổi học</span><strong>@invoice.LessonContent</strong>
+                                                        <span>Hình thức học</span><strong>@UiText.T(Context, invoice.TeachingMode.ToString())</strong>
+                                                        <span>Số tiền</span><strong>@invoice.Amount.ToString("N0")đ</strong>
+                                                        <span>Phương thức thanh toán</span><strong>@invoice.PaymentMethod</strong>
+                                                        <span>Trạng thái</span><strong>@InvoiceStatusLabel(invoice.Status)</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td></tr>
+                            }
+                        }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+    </div>
+</div>
+
+@functions {
+    private static string WalletTypeLabel(WalletTransactionType type) => type switch
+    {
+        WalletTransactionType.TopUp => "Nạp tiền",
+        WalletTransactionType.Payment => "Thanh toán buổi học",
+        WalletTransactionType.Refund => "Hoàn tiền",
+        WalletTransactionType.Withdrawal => "Rút tiền",
+        _ => type.ToString()
+    };
+
+    private static string InvoiceStatusLabel(InvoiceStatus status) => status switch
+    {
+        InvoiceStatus.Held => "Đang giữ tiền",
+        InvoiceStatus.Completed => "Hoàn thành",
+        InvoiceStatus.Refunded => "Hoàn tiền",
+        _ => status.ToString()
+    };
+}

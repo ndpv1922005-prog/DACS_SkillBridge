@@ -1,0 +1,36 @@
+@model HomeViewModel
+@{
+    ViewData["Title"] = UiText.T(Context, "HomeTitle");
+    var homeRole = AuthSession.RoleFor(Context);
+    var dashboardController = homeRole == UserRole.Teacher ? "TeacherDashboard" : homeRole == UserRole.Admin ? "Admin" : homeRole == UserRole.Student ? "Dashboard" : "Account";
+    var dashboardAction = homeRole is null ? "Login" : "Index";
+}
+
+<section class="hero rounded-3 p-4 p-lg-5 mb-4">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-8">
+            <h1 class="display-5 fw-bold mb-3">@UiText.T(Context, "HeroTitle")</h1>
+            <p class="lead text-secondary mb-4">@UiText.T(Context, "HeroText")</p>
+            <div class="d-flex flex-wrap gap-2">
+                <a asp-controller="Teachers" asp-action="Index" class="btn btn-primary btn-lg">@UiText.T(Context, "FindTeachers")</a>
+                <a asp-controller="@dashboardController" asp-action="@dashboardAction" class="btn btn-outline-light btn-lg">@UiText.T(Context, "OpenDashboard")</a>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="stat-card p-4">
+                <span class="text-secondary">@UiText.T(Context, "AvailableTeachers")</span>
+                <strong class="display-4 d-block">@Model.Teachers.Count()</strong>
+                <span class="badge text-bg-success">@UiText.T(Context, "MarketplaceActive")</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="row g-3">
+    @foreach (var teacher in Model.Teachers.Take(4))
+    {
+        <div class="col-md-6 col-xl-3">
+            <partial name="_TeacherCard" model="teacher" />
+        </div>
+    }
+</div>

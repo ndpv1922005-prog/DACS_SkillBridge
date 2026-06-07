@@ -1,0 +1,577 @@
+@model TeacherDashboardViewModel
+@{
+    ViewData["Title"] = UiText.T(Context, "TeacherDashboard");
+}
+
+<div class="teacher-shell">
+    <aside class="teacher-sidebar">
+        <div class="auth-icon mb-3">T</div>
+        <h1 class="h4 mb-1">@UiText.T(Context, "TeacherDashboard")</h1>
+        <p class="text-secondary small mb-4">@UiText.T(Context, "TeacherSidebarText")</p>
+        <nav class="vstack gap-2">
+            <a href="#overview" class="teacher-side-link">@UiText.T(Context, "Overview")</a>
+            <a href="#profile" class="teacher-side-link">@UiText.T(Context, "TeacherProfile")</a>
+            <a href="#schedule" class="teacher-side-link">@UiText.T(Context, "TeachingSchedule")</a>
+            <a href="#payments" class="teacher-side-link">@UiText.T(Context, "IncomePayments")</a>
+            <a asp-controller="Chat" asp-action="Support" asp-route-role="Teacher" class="teacher-side-link">Liên hệ hỗ trợ</a>
+        </nav>
+    </aside>
+
+    <section class="teacher-main">
+        @if (!string.IsNullOrWhiteSpace(Model.Success))
+        {
+            <div class="alert alert-success toast-like-message">@Model.Success</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Error))
+        {
+            <div class="alert alert-danger">@Model.Error</div>
+        }
+
+        @if (!Model.HasProfile)
+        {
+            <div class="empty-state teacher-empty mb-4">
+                <div class="auth-icon mx-auto mb-3">+</div>
+                <h2 class="h4 text-light">@UiText.T(Context, "CreateTeacherProfile")</h2>
+                <p>@UiText.T(Context, "ProfileNotVisibleText")</p>
+                <a href="#profile" class="btn btn-primary">@UiText.T(Context, "CreateTeacherProfile")</a>
+            </div>
+        }
+        else if (Model.Profile.Status != TeacherProfileStatus.Active)
+        {
+            <div class="alert alert-warning">
+                @string.Format(UiText.T(Context, "ProfileDraftWarning"), UiText.T(Context, Model.Profile.Status.ToString()))
+            </div>
+        }
+
+        <div id="overview" class="mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                <div>
+                    <h2 class="h3 mb-0">Teacher Professional Overview</h2>
+                </div>
+                <span class="badge text-bg-info">@UiText.T(Context, Model.Profile.Status.ToString())</span>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-6 col-xl-3"><div class="stat-card p-3"><span>@UiText.T(Context, "AverageRating")</span><strong>@Model.ProfessionalOverview.AverageRating.ToString("0.0")</strong></div></div>
+                <div class="col-md-6 col-xl-3"><div class="stat-card p-3"><span>@UiText.T(Context, "TotalReviews")</span><strong>@Model.ProfessionalOverview.TotalReviews</strong></div></div>
+                <div class="col-md-6 col-xl-3"><div class="stat-card p-3"><span>@UiText.T(Context, "SuccessfulTeachingSessions")</span><strong>@Model.ProfessionalOverview.CompletedSessions</strong></div></div>
+                <div class="col-md-6 col-xl-3"><div class="stat-card p-3"><span>@UiText.T(Context, "UniqueStudents")</span><strong>@Model.ProfessionalOverview.UniqueStudents</strong></div></div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-body p-4">
+                    <h3 class="h5 mb-1">@UiText.T(Context, "StudentReviews")</h3>
+                    <p class="text-secondary small mb-3">@UiText.T(Context, "ReadOnlyReviewsText")</p>
+                    <div class="vstack gap-3">
+                        @foreach (var review in Model.ProfessionalOverview.RecentReviews)
+                        {
+                            <div class="list-group-item bg-transparent text-light border-secondary-subtle px-0">
+                                <div class="d-flex flex-wrap justify-content-between gap-2 mb-1">
+                                    <strong>@review.StudentName</strong>
+                                    <span class="badge rating-badge"><span class="rating-star">⭐</span> @review.Stars</span>
+                                </div>
+                                <p class="text-secondary mb-1">@review.Content</p>
+                                <span class="text-secondary small">@review.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="d-none">
+                <div>
+                    <p class="text-uppercase text-success fw-bold small mb-1">@UiText.T(Context, "TeachingManagement")</p>
+                    <h2 class="h3 mb-0">@UiText.T(Context, "TeachingProfileOverview")</h2>
+                </div>
+                <span class="badge text-bg-info">@UiText.T(Context, Model.Profile.Status.ToString())</span>
+            </div>
+            <div class="row g-3 d-none">
+                <div class="col-md-3"><div class="stat-card p-3"><span>@UiText.T(Context, "RegisteredSessions")</span><strong>@Model.RegisteredStudents</strong></div></div>
+                <div class="col-md-3"><div class="stat-card p-3"><span>@UiText.T(Context, "PendingBookings")</span><strong>@Model.PendingBookings</strong></div></div>
+                <div class="col-md-3"><div class="stat-card p-3"><span>@UiText.T(Context, "ConfirmedSessions")</span><strong>@Model.ConfirmedSessions</strong></div></div>
+                <div class="col-md-3"><div class="stat-card p-3"><span>@UiText.T(Context, "CompletedSessionsStat")</span><strong>@Model.CompletedSessions</strong></div></div>
+            </div>
+        </div>
+
+        <div id="profile" class="card auth-card mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">@UiText.T(Context, "CreateUpdateTeacherProfile")</h2>
+                        <p class="text-secondary mb-0">@UiText.T(Context, "ActiveProfileVisibleText")</p>
+                    </div>
+                    <span class="badge text-bg-success">@UiText.T(Context, Model.Profile.TeachingMode.ToString())</span>
+                </div>
+
+                <form asp-controller="TeacherDashboard" asp-action="Profile" method="post" enctype="multipart/form-data" class="row g-3">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="Profile.Id" />
+                    <input type="hidden" asp-for="Profile.AvatarUrl" />
+                    <input type="hidden" asp-for="Profile.PortfolioImageUrl" />
+                    <div class="col-md-6">
+                        <label class="form-label">@UiText.T(Context, "DisplayName")</label>
+                        <input class="form-control" asp-for="Profile.DisplayName" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">@UiText.T(Context, "Avatar")</label>
+                        <input class="form-control" type="file" name="avatarFile" accept="image/*" />
+                        @if (!string.IsNullOrWhiteSpace(Model.Profile.AvatarUrl))
+                        {
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <img src="@Model.Profile.AvatarUrl" alt="" class="avatar" />
+                                <span class="text-secondary small">@UiText.T(Context, "CurrentImage")</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">@UiText.T(Context, "TeachingSkill")</label>
+                        <input class="form-control" asp-for="Profile.Skill" required placeholder="@UiText.T(Context, "TeachingSkillPlaceholder")" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">@UiText.T(Context, "PricePerSession")</label>
+                        <input class="form-control" asp-for="Profile.PricePerSession" type="number" min="0" step="10000" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phương thức nhận tiền mặc định</label>
+                        <select class="form-select" asp-for="Profile.DefaultPayoutMethod">
+                            <option>Tài khoản ngân hàng</option>
+                            <option>Momo</option>
+                            <option>Apple Pay</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ngân hàng mặc định</label>
+                        <select class="form-select" asp-for="Profile.DefaultPayoutBank">
+                            <option>Vietcombank</option>
+                            <option>BIDV</option>
+                            <option>MB Bank</option>
+                            <option>Techcombank</option>
+                            <option>ACB</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">@UiText.T(Context, "LearningMode")</label>
+                        <select class="form-select" asp-for="Profile.TeachingMode">
+                            <option value="@TeachingMode.Online">@UiText.T(Context, "Online")</option>
+                            <option value="@TeachingMode.Offline">@UiText.T(Context, "Offline")</option>
+                            <option value="@TeachingMode.Hybrid">@UiText.T(Context, "Hybrid")</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">@UiText.T(Context, "ProfileStatus")</label>
+                        <select class="form-select" asp-for="Profile.Status">
+                            <option value="@TeacherProfileStatus.Active">@UiText.T(Context, "Active")</option>
+                            <option value="@TeacherProfileStatus.Draft">@UiText.T(Context, "Draft")</option>
+                            <option value="@TeacherProfileStatus.Pending">@UiText.T(Context, "PendingReview")</option>
+                        </select>
+                        <div class="form-text text-secondary">@UiText.T(Context, "ActiveProfileHint")</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">@UiText.T(Context, "OfflineTeachingLocation")</label>
+                        <input class="form-control" asp-for="Profile.OfflineLocation" placeholder="@UiText.T(Context, "OfflineLocationPlaceholder")" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">@UiText.T(Context, "PortfolioImage")</label>
+                        <input class="form-control" type="file" name="portfolioFile" accept="image/*" />
+                        @if (!string.IsNullOrWhiteSpace(Model.Profile.PortfolioImageUrl))
+                        {
+                            <div class="portfolio-preview mt-2">
+                                <img src="@Model.Profile.PortfolioImageUrl" alt="@UiText.T(Context, "PortfolioPreview")" />
+                            </div>
+                        }
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">@UiText.T(Context, "Bio")</label>
+                        <textarea class="form-control" asp-for="Profile.Description" rows="3" required></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">@UiText.T(Context, "Experience")</label>
+                        <textarea class="form-control" asp-for="Profile.Experience" rows="3" placeholder="@UiText.T(Context, "ExperiencePlaceholder")"></textarea>
+                    </div>
+                    <div class="col-12 d-flex justify-content-end">
+                        <button class="btn btn-primary btn-lg">@UiText.T(Context, "SaveTeacherProfile")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="schedule" class="card auth-card mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">@UiText.T(Context, "TeachingSchedule")</h2>
+                        <p class="text-secondary mb-0">@UiText.T(Context, "ScheduleText")</p>
+                    </div>
+                    <div class="lesson-actions justify-content-end">
+                        <a asp-controller="TeacherDashboard" asp-action="Students" class="btn btn-sm lesson-action-btn">Xem học viên &amp; lịch học</a>
+                        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#studentsByWeekday">@UiText.T(Context, "ViewStudentsByDay")</button>
+                    </div>
+                </div>
+
+                <div class="collapse mb-4" id="studentsByWeekday">
+                    <div class="card">
+                        <div class="card-body p-3">
+                            <ul class="nav nav-tabs border-secondary-subtle mb-3" role="tablist">
+                                @foreach (var day in Model.DaySchedules)
+                                {
+                                    var tabId = $"weekday-{day.DayOfWeek}";
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link @(day.DayOfWeek == DateTime.Today.DayOfWeek ? "active" : "")" data-bs-toggle="tab" data-bs-target="#@tabId" type="button" role="tab">@day.DayName</button>
+                                    </li>
+                                }
+                            </ul>
+                            <div class="tab-content">
+                                @foreach (var day in Model.DaySchedules)
+                                {
+                                    var tabId = $"weekday-{day.DayOfWeek}";
+                                    <div class="tab-pane fade @(day.DayOfWeek == DateTime.Today.DayOfWeek ? "show active" : "")" id="@tabId" role="tabpanel">
+                                        @if (!day.Students.Any())
+                                        {
+                                            <div class="empty-state">@UiText.T(Context, "NoStudentsThisDay")</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="table-responsive">
+                                                <table class="table table-dark table-hover align-middle">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>@UiText.T(Context, "Student")</th>
+                                                            <th>@UiText.T(Context, "LessonContent")</th>
+                                                            <th>@UiText.T(Context, "ClassTime")</th>
+                                                            <th>@UiText.T(Context, "LearningMode")</th>
+                                                            <th>@UiText.T(Context, "LessonStatus")</th>
+                                                            <th>@UiText.T(Context, "Payment")</th>
+                                                            <th class="text-end">@UiText.T(Context, "Action")</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    @foreach (var student in day.Students)
+                                                    {
+                                                        var dayStatusLabel = student.Status == BookingStatus.Completed
+                                                            ? UiText.T(Context, "Completed")
+                                                            : (student.StudentCompleted || student.TeacherCompleted) && student.Status == BookingStatus.InProgress
+                                                                ? UiText.T(Context, "WaitingOtherSide")
+                                                                : UiText.T(Context, student.Status.ToString());
+                                                        <tr>
+                                                            <td>@student.StudentName</td>
+                                                            <td>@student.LessonContent</td>
+                                                            <td>@student.StartTime.ToLocalTime().ToString("HH:mm") - @student.EndTime.ToLocalTime().ToString("HH:mm")</td>
+                                                            <td>
+                                                                <span class="badge text-bg-info">@UiText.T(Context, student.TeachingMode.ToString())</span>
+                                                                @if (student.TeachingMode is TeachingMode.Offline or TeachingMode.Hybrid)
+                                                                {
+                                                                    <div class="text-secondary small">@student.OfflineLocation</div>
+                                                                }
+                                                            </td>
+                                                            <td><span class="badge text-bg-success">@dayStatusLabel</span></td>
+                                                            <td><span class="badge text-bg-info">@UiText.T(Context, student.PaymentStatus)</span></td>
+                                                            <td class="text-end">
+                                                                <div class="lesson-actions justify-content-end">
+                                                                @if ((student.TeachingMode is TeachingMode.Online or TeachingMode.Hybrid) && (student.Status is BookingStatus.Paid or BookingStatus.InProgress))
+                                                                {
+                                                                    if (student.TeacherCompleted)
+                                                                    {
+                                                                        <button class="btn btn-sm lesson-action-btn" type="button" disabled>@UiText.T(Context, "JoinClass")</button>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <a asp-controller="Bookings" asp-action="Room" asp-route-id="@student.BookingId" asp-route-role="Teacher" class="btn btn-sm lesson-action-btn">@UiText.T(Context, "JoinClass")</a>
+                                                                    }
+                                                                }
+                                                                @if (student.Status is BookingStatus.Paid or BookingStatus.InProgress)
+                                                                {
+                                                                    <form asp-action="CompleteTeaching" method="post" class="d-inline">
+                                                                        @Html.AntiForgeryToken()
+                                                                        <input type="hidden" name="id" value="@student.BookingId" />
+                                                                        <button class="btn btn-sm lesson-action-btn" disabled="@(student.TeacherCompleted || student.IsUnderReview)">@UiText.T(Context, "Confirmed")</button>
+                                                                    </form>
+                                                                }
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form asp-action="SaveSchedule" method="post" id="teacherScheduleForm">
+                    @Html.AntiForgeryToken()
+                    @{
+                        var slotIndex = 0;
+                        var newSlotIndex = 0;
+                    }
+                    <div class="weekly-schedule">
+                    @foreach (var day in Model.AvailabilityDays)
+                    {
+                        var dayName = day.DayOfWeek switch
+                        {
+                            DayOfWeek.Monday => UiText.T(Context, "Monday"),
+                            DayOfWeek.Tuesday => UiText.T(Context, "Tuesday"),
+                            DayOfWeek.Wednesday => UiText.T(Context, "Wednesday"),
+                            DayOfWeek.Thursday => UiText.T(Context, "Thursday"),
+                            DayOfWeek.Friday => UiText.T(Context, "Friday"),
+                            DayOfWeek.Saturday => UiText.T(Context, "Saturday"),
+                            _ => UiText.T(Context, "SundayShort")
+                        };
+                        <div class="schedule-day">
+                            <div class="schedule-day-header">
+                                <div>
+                                    <h3 class="h6 mb-1">@dayName</h3>
+                                    <span class="text-secondary small">@(day.IsActive ? UiText.T(Context, "HasSchedule") : UiText.T(Context, "Paused"))</span>
+                                </div>
+                                <button class="slot-toggle-button @(day.IsActive ? "is-on" : "is-off")" type="button" data-day-toggle="@day.DayOfWeek">
+                                    <span>@(day.IsActive ? "ON" : "OFF")</span>
+                                </button>
+                            </div>
+
+                            <div class="vstack gap-2 my-3">
+                                @foreach (var slot in day.Slots)
+                                {
+                                    var currentSlotIndex = slotIndex++;
+                                    <div class="schedule-slot-row @(slot.IsActive ? "" : "is-off")" data-schedule-row data-day="@day.DayOfWeek">
+                                        <input type="hidden" name="slots[@currentSlotIndex].Id" value="@slot.Id" />
+                                        <input type="hidden" name="slots[@currentSlotIndex].DayOfWeek" value="@day.DayOfWeek" />
+                                        <input type="hidden" name="slots[@currentSlotIndex].IsActive" value="@slot.IsActive.ToString().ToLowerInvariant()" data-slot-active-value />
+                                        <input class="form-control form-control-sm" type="time" name="slots[@currentSlotIndex].StartTime" value="@slot.StartTime" aria-label="@UiText.T(Context, "StartTime")" />
+                                        <input class="form-control form-control-sm" type="time" name="slots[@currentSlotIndex].EndTime" value="@slot.EndTime" aria-label="@UiText.T(Context, "EndTime")" />
+                                        <input class="form-control form-control-sm" name="slots[@currentSlotIndex].PlannedContent" value="@slot.PlannedContent" placeholder="@UiText.T(Context, "PlannedContent")" />
+                                        <select class="form-select form-select-sm" name="slots[@currentSlotIndex].TeachingMode" data-teaching-mode-select>
+                                            <option value="@TeachingMode.Online" selected="@(slot.TeachingMode == TeachingMode.Online)">@UiText.T(Context, "Online")</option>
+                                            <option value="@TeachingMode.Offline" selected="@(slot.TeachingMode == TeachingMode.Offline)">@UiText.T(Context, "Offline")</option>
+                                            <option value="@TeachingMode.Hybrid" selected="@(slot.TeachingMode == TeachingMode.Hybrid)">@UiText.T(Context, "Hybrid")</option>
+                                        </select>
+                                        <input class="form-control form-control-sm" name="slots[@currentSlotIndex].OfflineLocation" value="@slot.OfflineLocation" placeholder="@UiText.T(Context, "OfflineLocation")" data-offline-location />
+                                        <button class="slot-toggle-button @(slot.IsActive ? "is-on" : "is-off")" type="button" data-slot-toggle>
+                                            <span>@(slot.IsActive ? "ON" : "OFF")</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-light" type="submit" formaction="@Url.Action("DeleteAvailability", "TeacherDashboard")" formmethod="post" name="id" value="@slot.Id">@UiText.T(Context, "Delete")</button>
+                                    </div>
+                                }
+                            </div>
+
+                            @{
+                                var currentNewSlotIndex = newSlotIndex++;
+                            }
+                            <div class="schedule-add-row">
+                                <input type="hidden" name="newSlots[@currentNewSlotIndex].DayOfWeek" value="@day.DayOfWeek" />
+                                <input type="hidden" name="newSlots[@currentNewSlotIndex].IsActive" value="true" />
+                                <input class="form-control form-control-sm" type="time" name="newSlots[@currentNewSlotIndex].StartTime" aria-label="@UiText.T(Context, "StartTime")" />
+                                <input class="form-control form-control-sm" type="time" name="newSlots[@currentNewSlotIndex].EndTime" aria-label="@UiText.T(Context, "EndTime")" />
+                                <input class="form-control form-control-sm" name="newSlots[@currentNewSlotIndex].PlannedContent" placeholder="@UiText.T(Context, "PlannedContent")" />
+                                <select class="form-select form-select-sm" name="newSlots[@currentNewSlotIndex].TeachingMode" data-teaching-mode-select>
+                                    <option value="@TeachingMode.Online">@UiText.T(Context, "Online")</option>
+                                    <option value="@TeachingMode.Offline">@UiText.T(Context, "Offline")</option>
+                                    <option value="@TeachingMode.Hybrid">@UiText.T(Context, "Hybrid")</option>
+                                </select>
+                                <input class="form-control form-control-sm" name="newSlots[@currentNewSlotIndex].OfflineLocation" placeholder="@UiText.T(Context, "OfflineLocation")" data-offline-location />
+                                <button class="btn btn-sm btn-outline-light" type="button" data-clear-new-slot>@UiText.T(Context, "AddTimeSlot")</button>
+                            </div>
+                        </div>
+                    }
+                    </div>
+                    <div class="d-flex justify-content-end mt-4">
+                        <button class="btn btn-primary" type="submit">@UiText.T(Context, "SaveSchedule")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="payments" class="card mt-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">@UiText.T(Context, "IncomePayments")</h2>
+                        <p class="text-secondary mb-0">@UiText.T(Context, "IncomePaymentsText")</p>
+                    </div>
+                    <span class="badge text-bg-info">@UiText.T(Context, "PlatformCommissionBadge")</span>
+                </div>
+
+                <div class="payment-stat-grid mb-4">
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "TotalStudentPaid")</span><strong>@Model.PaymentOverview.TotalPaid.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "SystemHeldAmount")</span><strong>@Model.PaymentOverview.TotalHeld.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "PaidToTeacher")</span><strong>@Model.PaymentOverview.TotalReleased.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "TeacherNetIncome")</span><strong>@Model.PaymentOverview.TeacherNetIncome.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "WithdrawableBalance")</span><strong>@Model.PaymentOverview.WithdrawableBalance.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "TotalWithdrawn")</span><strong>@Model.PaymentOverview.TotalWithdrawn.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>@UiText.T(Context, "PendingWithdrawal")</span><strong>@Model.PaymentOverview.PendingWithdrawal.ToString("N0")đ</strong></div>
+                </div>
+
+                <div class="d-flex justify-content-end mb-4">
+                    <a class="btn btn-primary @(Model.PaymentOverview.WithdrawableBalance <= 0 ? "disabled" : "")" asp-controller="Wallet" asp-action="Withdraw">Rút tiền</a>
+                </div>
+
+                @if (!Model.PaymentOverview.Transactions.Any())
+                {
+                    <div class="empty-state">@UiText.T(Context, "NoPaymentTransactions")</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>@UiText.T(Context, "Student")</th>
+                                    <th>@UiText.T(Context, "PaidSessionCount")</th>
+                                    <th>@UiText.T(Context, "TotalAmount")</th>
+                                    <th>Phương thức</th>
+                                    <th>@UiText.T(Context, "Commission")</th>
+                                    <th>@UiText.T(Context, "TeacherNetIncome")</th>
+                                    <th>@UiText.T(Context, "PaymentStatus")</th>
+                                    <th>Mã giao dịch</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var transaction in Model.PaymentOverview.Transactions)
+                            {
+                                <tr>
+                                    <td>@transaction.StudentName</td>
+                                    <td>@transaction.SessionCount</td>
+                                    <td>@transaction.TotalAmount.ToString("N0")đ</td>
+                                    <td>@transaction.Method</td>
+                                    <td>@transaction.CommissionAmount.ToString("N0")đ</td>
+                                    <td>@transaction.TeacherNetAmount.ToString("N0")đ</td>
+                                    <td><span class="badge text-bg-success">@UiText.T(Context, transaction.Status)</span></td>
+                                    <td>@transaction.TransactionCode</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                <h3 class="h5 mt-4 mb-3">Lịch sử giao dịch</h3>
+                @if (!Model.PaymentOverview.Withdrawals.Any())
+                {
+                    <div class="empty-state">@UiText.T(Context, "NoWithdrawals")</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>@UiText.T(Context, "Time")</th>
+                                    <th>Loại giao dịch</th>
+                                    <th>Phương thức</th>
+                                    <th>@UiText.T(Context, "Amount")</th>
+                                    <th>@UiText.T(Context, "Status")</th>
+                                    <th>Mã giao dịch</th>
+                                    <th class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var withdrawal in Model.PaymentOverview.Withdrawals)
+                            {
+                                <tr>
+                                    <td>@withdrawal.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>Rút tiền</td>
+                                    <td>
+                                        @withdrawal.Method
+                                        @if (!string.IsNullOrWhiteSpace(withdrawal.BankName))
+                                        {
+                                            <div class="text-secondary small">@withdrawal.BankName</div>
+                                        }
+                                    </td>
+                                    <td>@withdrawal.Amount.ToString("N0")đ</td>
+                                    <td><span class="badge text-bg-info">@UiText.T(Context, withdrawal.Status)</span></td>
+                                    <td>@withdrawal.Id.ToString("N")[..10].ToUpperInvariant()</td>
+                                    <td class="text-end">
+                                        @if (withdrawal.Status == "Đang xử lý" || withdrawal.Status == UiText.T(Context, "PendingWithdrawalStatus"))
+                                        {
+                                            <form asp-action="MarkWithdrawalPaid" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@withdrawal.Id" />
+                                                <button class="btn btn-sm btn-outline-light">@UiText.T(Context, "MarkWithdrawn")</button>
+                                            </form>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+    </section>
+</div>
+
+<script>
+document.querySelectorAll('[data-slot-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const row = button.closest('[data-schedule-row]');
+        const valueInput = row?.querySelector('[data-slot-active-value]');
+        const isOn = valueInput?.value === 'true';
+        const nextValue = (!isOn).toString();
+        if (valueInput) {
+            valueInput.value = nextValue;
+        }
+        row?.classList.toggle('is-off', isOn);
+        button.classList.toggle('is-on', !isOn);
+        button.classList.toggle('is-off', isOn);
+        button.querySelector('span').textContent = isOn ? 'OFF' : 'ON';
+    });
+});
+
+document.querySelectorAll('[data-day-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const day = button.dataset.dayToggle;
+        const rows = document.querySelectorAll(`[data-schedule-row][data-day="${day}"]`);
+        const shouldTurnOn = button.textContent.trim() === 'OFF';
+        rows.forEach((row) => {
+            const valueInput = row.querySelector('[data-slot-active-value]');
+            const slotButton = row.querySelector('[data-slot-toggle]');
+            if (valueInput) {
+                valueInput.value = shouldTurnOn.toString();
+            }
+            row.classList.toggle('is-off', !shouldTurnOn);
+            slotButton?.classList.toggle('is-on', shouldTurnOn);
+            slotButton?.classList.toggle('is-off', !shouldTurnOn);
+            if (slotButton) {
+                slotButton.querySelector('span').textContent = shouldTurnOn ? 'ON' : 'OFF';
+            }
+        });
+        button.classList.toggle('is-on', shouldTurnOn);
+        button.classList.toggle('is-off', !shouldTurnOn);
+        button.querySelector('span').textContent = shouldTurnOn ? 'ON' : 'OFF';
+    });
+});
+
+document.querySelectorAll('[data-clear-new-slot]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const row = button.closest('.schedule-add-row');
+        const inputs = row?.querySelectorAll('input[type="time"]');
+        if (inputs?.length === 2 && !inputs[0].value && !inputs[1].value) {
+            inputs[0].value = '08:00';
+            inputs[1].value = '10:00';
+        }
+        row?.querySelector('input[name$=".PlannedContent"]')?.focus();
+    });
+});
+
+function updateScheduleLocationVisibility(row) {
+    const mode = row?.querySelector('[data-teaching-mode-select]')?.value;
+    const location = row?.querySelector('[data-offline-location]');
+    if (!location) return;
+    const needsLocation = mode === 'Offline' || mode === 'Hybrid';
+    location.classList.toggle('d-none', !needsLocation);
+    if (!needsLocation) {
+        location.value = '';
+    }
+}
+
+document.querySelectorAll('.schedule-slot-row, .schedule-add-row').forEach((row) => {
+    updateScheduleLocationVisibility(row);
+});
+
+document.addEventListener('change', (event) => {
+    if (!event.target.matches('[data-teaching-mode-select]')) return;
+    updateScheduleLocationVisibility(event.target.closest('.schedule-slot-row, .schedule-add-row'));
+});
+</script>

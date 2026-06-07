@@ -1,0 +1,65 @@
+@model ChangePasswordViewModel
+@{
+    ViewData["Title"] = UiText.T(Context, "Settings");
+}
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card settings-summary h-100">
+            <div class="card-body p-4">
+                <div class="auth-icon mb-3">&#9881;</div>
+                <h1 class="h3 mb-2">@UiText.T(Context, "Settings")</h1>
+                <p class="text-secondary mb-0">@UiText.T(Context, "SettingsText")</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card auth-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">@UiText.T(Context, "ChangePassword")</h2>
+                        <p class="text-secondary mb-0">@UiText.T(Context, "PasswordText")</p>
+                    </div>
+                    <span class="badge text-bg-success">@UiText.T(Context, "Secure")</span>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.Success))
+                {
+                    <div class="alert alert-success toast-like-message">@Model.Success</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Error))
+                {
+                    <div class="alert alert-danger">@Model.Error</div>
+                }
+
+                <form method="post" class="vstack gap-3">
+                    @Html.AntiForgeryToken()
+                    <div>
+                        <label class="form-label">@UiText.T(Context, "CurrentPassword")</label>
+                        <div class="input-group password-hold-group">
+                            <input class="form-control" asp-for="CurrentPassword" type="password" required data-password-field />
+                            <button class="btn btn-outline-light password-hold-button" type="button" data-password-hold aria-label="@UiText.T(Context, "HoldToShow")">@UiText.T(Context, "HoldToShow")</button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label">@UiText.T(Context, "NewPassword")</label>
+                        <div class="input-group password-hold-group">
+                            <input class="form-control" asp-for="NewPassword" type="password" minlength="6" required data-password-field />
+                            <button class="btn btn-outline-light password-hold-button" type="button" data-password-hold aria-label="@UiText.T(Context, "HoldToShow")">@UiText.T(Context, "HoldToShow")</button>
+                        </div>
+                        <div class="form-text text-secondary">@UiText.T(Context, "Minimum6")</div>
+                    </div>
+                    <div>
+                        <label class="form-label">@UiText.T(Context, "ConfirmNewPassword")</label>
+                        <div class="input-group password-hold-group">
+                            <input class="form-control" asp-for="ConfirmPassword" type="password" minlength="6" required data-password-field />
+                            <button class="btn btn-outline-light password-hold-button" type="button" data-password-hold aria-label="@UiText.T(Context, "HoldToShow")">@UiText.T(Context, "HoldToShow")</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg">@UiText.T(Context, "ChangePassword")</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,51 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = UiText.T(Context, "Register");
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+        <div class="card">
+            <div class="card-body p-4">
+                <h1 class="h3 mb-3">@UiText.T(Context, "RegisterTitle")</h1>
+                <p class="text-secondary">@UiText.T(Context, "RegisterText")</p>
+                @if (!string.IsNullOrWhiteSpace(Model.Error))
+                {
+                    <div class="alert alert-danger">@Model.Error</div>
+                }
+                <form asp-action="Register" method="post" class="vstack gap-3">
+                    @Html.AntiForgeryToken()
+                    <div>
+                        <label class="form-label">@UiText.T(Context, "FullName")</label>
+                        <input class="form-control" asp-for="Name" required />
+                    </div>
+                    <div>
+                        <label class="form-label">Email</label>
+                        <input class="form-control" asp-for="Email" type="email" required />
+                    </div>
+                    <div>
+                        <label class="form-label">@UiText.T(Context, "Password")</label>
+                        <div class="input-group password-hold-group">
+                            <input class="form-control" asp-for="Password" type="password" minlength="6" required data-password-field />
+                            <button class="btn btn-outline-light password-hold-button" type="button" data-password-hold aria-label="@UiText.T(Context, "HoldToShow")">@UiText.T(Context, "HoldToShow")</button>
+                        </div>
+                        <div class="form-text">Mật khẩu phải có ít nhất 6 ký tự.</div>
+                    </div>
+                    <div>
+                        <label class="form-label">@UiText.T(Context, "Role")</label>
+                        <select class="form-select" asp-for="Role">
+                            <option value="@UserRole.Student">@UiText.T(Context, "Student")</option>
+                            <option value="@UserRole.Teacher">@UiText.T(Context, "Teacher")</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary btn-lg">@UiText.T(Context, "Register")</button>
+                </form>
+                <hr />
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <span class="text-secondary small">@UiText.T(Context, "HaveAccount")</span>
+                    <a class="btn btn-outline-light btn-sm" asp-action="Login">@UiText.T(Context, "Login")</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

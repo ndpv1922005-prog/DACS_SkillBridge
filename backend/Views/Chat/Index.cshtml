@@ -1,0 +1,80 @@
+@model ChatViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = UiText.T(Context, "Chat");
+    var chatText = new
+    {
+        chooseConversation = UiText.T(Context, "ChooseConversation"),
+        noMessagesYet = UiText.T(Context, "NoMessagesYet"),
+        confirmDeleteConversation = UiText.T(Context, "ConfirmDeleteConversation"),
+        noMessages = UiText.T(Context, "NoMessages")
+    };
+}
+
+<div class="chat-shell">
+    <aside class="card chat-sidebar">
+        <div class="card-body p-0">
+            <div class="chat-sidebar-header">
+                <h1 class="h4 mb-1">@UiText.T(Context, "Chat")</h1>
+                <p class="text-secondary mb-0">@UiText.T(Context, "ConversationList")</p>
+            </div>
+            <div class="chat-contact-list">
+                @foreach (var contact in Model.Contacts)
+                {
+                    <button class="chat-contact teacher-chat @(contact.UnreadCount > 0 ? "has-unread" : "")"
+                            type="button"
+                            data-user-id="@contact.UserId"
+                            data-name="@contact.Name"
+                            data-role="@contact.RoleLabel"
+                            data-avatar="@contact.AvatarUrl">
+                        <img src="@contact.AvatarUrl" alt="" class="avatar" />
+                        <span class="chat-contact-main">
+                            <span class="chat-contact-top">
+                                <strong>@contact.Name</strong>
+                                @if (contact.LastMessageAt is not null)
+                                {
+                                    <small>@contact.LastMessageAt.Value.ToLocalTime().ToString("HH:mm")</small>
+                                }
+                                @if (contact.UnreadCount > 0)
+                                {
+                                    <span class="chat-contact-unread">@contact.UnreadCount</span>
+                                }
+                            </span>
+                            <span class="chat-contact-role">@contact.RoleLabel</span>
+                            <span class="chat-contact-last">@contact.LastMessage</span>
+                        </span>
+                    </button>
+                }
+            </div>
+        </div>
+    </aside>
+
+    <section class="card chat-panel">
+        <div class="chat-header">
+            <div class="d-flex align-items-center gap-3">
+                <img src="" alt="" class="avatar d-none" id="chatAvatar" />
+                <div>
+                    <strong id="chatTitle">@UiText.T(Context, "ChooseConversation")</strong>
+                    <span class="d-block text-secondary small" id="chatSubtitle"></span>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-outline-light d-none" type="button" id="deleteConversationButton">@UiText.T(Context, "DeleteConversation")</button>
+        </div>
+        <div class="messages chat-messages" id="chatMessages">
+            <div class="chat-empty">@UiText.T(Context, "ChooseConversation")</div>
+        </div>
+        <form class="chat-composer" id="chatForm">
+            <textarea class="form-control" id="messageInputMvc" placeholder="@UiText.T(Context, "TypeMessage")" rows="1" autocomplete="off"></textarea>
+            <button class="btn btn-primary" type="submit">@UiText.T(Context, "Send")</button>
+        </form>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script>
+        window.skillBridgeCurrentUserId = "@Model.CurrentUserId";
+        window.skillBridgeInitialContactId = "@Model.InitialContactId";
+        window.skillBridgeText = @Html.Raw(JsonSerializer.Serialize(chatText));
+    </script>
+}

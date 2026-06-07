@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SkillBridge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">SB</span>
+      <div>
+        <strong>SkillBridge</strong>
+        <small data-i18n="brandSubtitle">Marketplace MVP</small>
+      </div>
+    </div>
+    <nav>
+      <a href="#marketplace" class="active" data-i18n="navMarketplace">Marketplace</a>
+      <a href="#dashboard" data-i18n="navDashboard">Dashboard</a>
+      <a href="#chat" data-i18n="navChat">Chat</a>
+      <a href="#call" data-i18n="navCall">Video Call</a>
+    </nav>
+    <div class="user-card" id="currentUser"></div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" data-i18n="heroEyebrow">Production-style learning workflow</p>
+        <h1 data-i18n="heroTitle">Discover, book, pay, chat, and join sessions.</h1>
+      </div>
+      <div class="auth-panel">
+        <label class="field-label" for="language" data-i18n="languageLabel">Language</label>
+        <select id="language" aria-label="Language">
+          <option value="en">English</option>
+          <option value="vi">Ti&#7871;ng Vi&#7879;t</option>
+        </select>
+        <input id="email" value="student@skillbridge.dev" aria-label="Email" data-i18n-attr="aria-label:emailLabel">
+        <input id="password" type="password" value="password" aria-label="Password" data-i18n-attr="aria-label:passwordLabel">
+        <button id="loginBtn" data-i18n="loginButton">Login</button>
+      </div>
+    </header>
+
+    <section class="stats" id="dashboard">
+      <article><span data-i18n="statBookings">Total bookings</span><strong id="statBookings">0</strong></article>
+      <article><span data-i18n="statHeld">Escrow held</span><strong id="statHeld">0&#273;</strong></article>
+      <article><span data-i18n="statPaid">Paid sessions</span><strong id="statPaid">0</strong></article>
+      <article><span data-i18n="statOnline">Online teachers</span><strong id="statOnline">0</strong></article>
+    </section>
+
+    <section class="panel" id="marketplace">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" data-i18n="marketplaceEyebrow">Teacher Marketplace</p>
+          <h2 data-i18n="marketplaceTitle">Find the right mentor</h2>
+        </div>
+        <div class="filters">
+          <input id="search" placeholder="Search skill, teacher, topic" data-i18n-attr="placeholder:searchPlaceholder">
+          <select id="mode">
+            <option value="" data-i18n="modeAll">All modes</option>
+            <option value="Online" data-i18n="modeOnline">Online</option>
+            <option value="Offline" data-i18n="modeOffline">Offline</option>
+            <option value="Hybrid" data-i18n="modeHybrid">Hybrid</option>
+          </select>
+        </div>
+      </div>
+      <div class="teacher-grid" id="teacherGrid"></div>
+    </section>
+
+    <section class="workbench">
+      <div class="panel">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow" data-i18n="bookingEyebrow">Booking System</p>
+            <h2 data-i18n="bookingTitle">Session flow</h2>
+          </div>
+          <button id="refreshBookings" data-i18n="refreshButton">Refresh</button>
+        </div>
+        <div class="booking-list" id="bookingList"></div>
+      </div>
+
+      <div class="panel" id="chat">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow" data-i18n="chatEyebrow">Realtime Chat</p>
+            <h2 id="chatTitle" data-i18n="selectTeacher">Select a teacher</h2>
+          </div>
+          <span class="badge" id="chatStatus" data-i18n="offline">Offline</span>
+        </div>
+        <div class="messages" id="messages"></div>
+        <form class="composer" id="messageForm">
+          <input id="messageInput" placeholder="Write a message" data-i18n-attr="placeholder:messagePlaceholder">
+          <button data-i18n="sendButton">Send</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel video-panel" id="call">
+      <div class="video-stage">
+        <div class="video-tile primary-video">
+          <span data-i18n="cameraPreview">Camera Preview</span>
+          <strong id="callState" data-i18n="paidBookingRequired">Paid booking required</strong>
+        </div>
+        <div class="video-tile small-video">
+          <span data-i18n="mentor">Mentor</span>
+        </div>
+      </div>
+      <div class="call-controls">
+        <button id="cameraBtn" data-i18n="cameraButton">Camera</button>
+        <button id="micBtn" data-i18n="micButton">Microphone</button>
+        <button class="danger" id="endCallBtn" data-i18n="endButton">End</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="/app.js?v=20260508-stable"></script>
+</body>
+</html>

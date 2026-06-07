@@ -1,0 +1,106 @@
+@model WalletCheckoutViewModel
+@{
+    ViewData["Title"] = "Rút tiền";
+    var methods = new[]
+    {
+        ("Tài khoản ngân hàng", "🏦", "Nhận tiền qua ngân hàng"),
+        ("Momo", "📱", "Nhận tiền qua ví Momo"),
+        ("Apple Pay", "", "Nhận tiền qua Apple Pay")
+    };
+}
+
+<div class="checkout-shell">
+    <div class="checkout-hero card">
+        <div class="card-body p-4">
+            <a class="auth-link small" asp-controller="TeacherDashboard" asp-action="Index" asp-fragment="payments">← Quay lại thu nhập</a>
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mt-3">
+                <div>
+                    <p class="text-uppercase text-success fw-bold small mb-1">Ví giáo viên</p>
+                    <h1 class="h3 mb-1">Rút tiền</h1>
+                    <p class="text-secondary mb-0">Chọn phương thức nhận tiền và nhập thông tin tài khoản.</p>
+                </div>
+                <div class="checkout-balance">
+                    <span>Số dư có thể rút</span>
+                    <strong>@Model.Balance.ToString("N0")đ</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="alert alert-danger">@Model.Error</div>
+    }
+
+    <form asp-action="Withdraw" method="post" class="checkout-grid">
+        @Html.AntiForgeryToken()
+        <section class="card">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-3">Số tiền muốn rút</h2>
+                <input class="form-control checkout-amount" type="number" name="amount" min="10000" step="10000" max="@Model.Balance" value="@(Model.Amount > 0 ? Model.Amount : Model.Balance)" required />
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-3">Phương thức nhận tiền</h2>
+                <div class="payment-method-grid">
+                    @foreach (var method in methods)
+                    {
+                        <label class="payment-method-card">
+                            <input type="radio" name="method" value="@method.Item1" checked="@(Model.Method == method.Item1)" data-wallet-method />
+                            <span class="payment-method-icon">@method.Item2</span>
+                            <strong>@method.Item1</strong>
+                            <small>@method.Item3</small>
+                        </label>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <section class="card checkout-detail-card">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-3">Thông tin nhận tiền</h2>
+                <div data-method-fields="Tài khoản ngân hàng" class="wallet-method-fields row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Ngân hàng</label>
+                        <select class="form-select" name="bankName">
+                            <option>Vietcombank</option>
+                            <option>BIDV</option>
+                            <option>MB Bank</option>
+                            <option>Techcombank</option>
+                            <option>ACB</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4"><label class="form-label">Tên chủ tài khoản</label><input class="form-control" name="accountName" value="@Model.UserName" /></div>
+                    <div class="col-md-4"><label class="form-label">Số tài khoản</label><input class="form-control" name="accountNumber" placeholder="Nhập số tài khoản" /></div>
+                </div>
+                <div data-method-fields="Momo" class="wallet-method-fields row g-3 d-none">
+                    <div class="col-md-6"><label class="form-label">Số điện thoại ví</label><input class="form-control" name="accountNumber" placeholder="09xxxxxxxx" /></div>
+                    <div class="col-md-6"><label class="form-label">Tên chủ ví</label><input class="form-control" name="accountName" value="@Model.UserName" /></div>
+                </div>
+                <div data-method-fields="Apple Pay" class="wallet-method-fields row g-3 d-none">
+                    <div class="col-md-8"><label class="form-label">Apple ID / Email Apple Pay</label><input class="form-control" name="accountNumber" placeholder="name@icloud.com" /></div>
+                    <div class="col-md-4"><label class="form-label">Tên người nhận</label><input class="form-control" name="accountName" value="@Model.UserName" /></div>
+                </div>
+                <div class="d-flex justify-content-end mt-4">
+                    <button class="btn btn-primary btn-lg" disabled="@(Model.Balance <= 0)">Gửi yêu cầu rút tiền</button>
+                </div>
+            </div>
+        </section>
+    </form>
+</div>
+
+<script>
+function syncWalletFields() {
+  const selected = document.querySelector('[data-wallet-method]:checked')?.value;
+  document.querySelectorAll('[data-method-fields]').forEach((panel) => {
+    panel.classList.toggle('d-none', panel.dataset.methodFields !== selected);
+  });
+}
+
+document.querySelectorAll('[data-wallet-method]').forEach((input) => {
+  input.addEventListener('change', syncWalletFields);
+});
+syncWalletFields();
+</script>

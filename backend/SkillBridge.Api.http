@@ -1,0 +1,37 @@
+@baseUrl = http://localhost:5123
+
+### Health
+GET {{baseUrl}}/api/health
+
+### API docs
+GET {{baseUrl}}/api/docs
+
+### Demo users
+GET {{baseUrl}}/api/users
+
+### Login as student
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "student@skillbridge.dev",
+  "password": "password"
+}
+
+### Teachers
+GET {{baseUrl}}/api/teachers
+
+### Search teachers
+GET {{baseUrl}}/api/teachers?query=React&mode=Hybrid
+
+### Create booking
+# Replace teacherProfileId with an id from GET /api/teachers.
+POST {{baseUrl}}/api/bookings
+Content-Type: application/json
+
+{
+  "studentId": "REPLACE_STUDENT_ID",
+  "teacherProfileId": "REPLACE_TEACHER_PROFILE_ID",
+  "startTime": "2026-05-09T09:00:00+07:00",
+  "durationMinutes": 60
+}

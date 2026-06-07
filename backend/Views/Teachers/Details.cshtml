@@ -1,0 +1,130 @@
+@model TeacherDetailViewModel
+@{
+    ViewData["Title"] = Model.Teacher.Name;
+    var groupedSlots = Model.Slots.GroupBy(slot => slot.StartTime.Date).OrderBy(group => group.Key);
+    var teacherUserId = AuthSession.UserId(Context, UserRole.Teacher);
+    var isTeacher = teacherUserId is not null;
+    var isStudent = AuthSession.UserId(Context, UserRole.Student) is not null && !isTeacher;
+    var isOwnProfile = teacherUserId == Model.Teacher.UserId;
+}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <img src="@Model.Teacher.AvatarUrl" alt="" class="avatar avatar-lg" />
+                    <div>
+                        <h1 class="h2 mb-1">@Model.Teacher.Name</h1>
+                        <p class="text-secondary mb-0">@Model.Teacher.Skill</p>
+                    </div>
+                </div>
+                <p class="lead">@Model.Teacher.Description</p>
+                <p class="text-secondary">@Model.Teacher.Bio</p>
+                @if (!string.IsNullOrWhiteSpace(Model.Teacher.Experience))
+                {
+                    <h2 class="h5 mt-4">@UiText.T(Context, "Experience")</h2>
+                    <p class="text-secondary">@Model.Teacher.Experience</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Teacher.OfflineLocation))
+                {
+                    <h2 class="h5 mt-4">@UiText.T(Context, "OfflineTeachingLocation")</h2>
+                    <p class="text-secondary">@Model.Teacher.OfflineLocation</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Teacher.PortfolioImageUrl))
+                {
+                    <img src="@Model.Teacher.PortfolioImageUrl" alt="@UiText.T(Context, "PortfolioAlt")" class="img-fluid rounded-3 border border-secondary-subtle mt-3" />
+                }
+                <div class="d-flex gap-2 mt-3">
+                    <span class="badge text-bg-success">@UiText.T(Context, Model.Teacher.TeachingMode.ToString())</span>
+                    <span class="badge rating-badge"><span class="rating-star">⭐</span> @Model.Teacher.Rating.ToString("0.0")</span>
+                    <span class="badge text-bg-info">@(Model.Teacher.IsOnline ? UiText.T(Context, "Online") : UiText.T(Context, "Offline"))</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="text-secondary">@UiText.T(Context, "PricePerSession")</div>
+                <div class="display-6 fw-bold mb-3">@Model.Teacher.PricePerSession.ToString("N0")đ</div>
+                <h2 class="h5 mb-3">@UiText.T(Context, "BookableSlots")</h2>
+                @if (isOwnProfile)
+                {
+                    <a asp-controller="TeacherDashboard" asp-action="Index" class="btn btn-primary w-100 mb-3">@UiText.T(Context, "EditProfile")</a>
+                }
+                @if (isStudent)
+                {
+                    <a asp-controller="Chat" asp-action="Index" asp-route-contactId="@Model.Teacher.UserId" class="btn btn-outline-light w-100 mb-3">@UiText.T(Context, "Message")</a>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Error))
+                {
+                    <div class="alert alert-danger">@Model.Error</div>
+                }
+
+                @if (isTeacher && !isOwnProfile)
+                {
+                    <div class="empty-state">@UiText.T(Context, "TeacherCannotBook")</div>
+                }
+                else if (!Model.Slots.Any())
+                {
+                    <div class="empty-state">@UiText.T(Context, "TeacherNoSlots")</div>
+                }
+                else
+                {
+                    <div class="vstack gap-3">
+                        @foreach (var group in groupedSlots)
+                        {
+                            var dayName = group.Key.DayOfWeek switch
+                            {
+                                DayOfWeek.Monday => UiText.T(Context, "MondayShort"),
+                                DayOfWeek.Tuesday => UiText.T(Context, "TuesdayShort"),
+                                DayOfWeek.Wednesday => UiText.T(Context, "WednesdayShort"),
+                                DayOfWeek.Thursday => UiText.T(Context, "ThursdayShort"),
+                                DayOfWeek.Friday => UiText.T(Context, "FridayShort"),
+                                DayOfWeek.Saturday => UiText.T(Context, "SaturdayShort"),
+                                _ => UiText.T(Context, "SundayShort")
+                            };
+                            <div>
+                                <div class="text-secondary small fw-bold mb-2">@dayName, @group.Key.ToString("dd/MM/yyyy")</div>
+                                <div class="booking-slot-grid">
+                                    @foreach (var slot in group)
+                                    {
+                                        @if (isStudent)
+                                        {
+                                            <form asp-controller="Bookings" asp-action="Create" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="teacherProfileId" value="@Model.Teacher.Id" />
+                                                <input type="hidden" name="startTime" value="@slot.StartTime.ToString("O")" />
+                                                <input type="hidden" name="teachingMode" value="@slot.TeachingMode" />
+                                                <button class="booking-slot-button @(slot.IsBooked ? "is-booked" : "")" disabled="@slot.IsBooked">
+                                                    <span>@slot.StartTime.ToString("HH:mm") - @slot.EndTime.ToString("HH:mm")</span>
+                                                    <small>@(slot.IsBooked ? UiText.T(Context, "Booked") : UiText.T(Context, slot.TeachingMode.ToString()))</small>
+                                                    @if (!string.IsNullOrWhiteSpace(slot.LessonContent))
+                                                    {
+                                                        <small>@slot.LessonContent</small>
+                                                    }
+                                                    @if (slot.TeachingMode is TeachingMode.Offline or TeachingMode.Hybrid && !string.IsNullOrWhiteSpace(slot.OfflineLocation))
+                                                    {
+                                                        <small>@slot.OfflineLocation</small>
+                                                    }
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <button class="booking-slot-button is-booked" disabled>
+                                                <span>@slot.StartTime.ToString("HH:mm") - @slot.EndTime.ToString("HH:mm")</span>
+                                                <small>@UiText.T(Context, "TeacherRoleWarning")</small>
+                                            </button>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

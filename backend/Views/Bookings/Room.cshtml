@@ -1,0 +1,24 @@
+@model Booking
+@{
+    ViewData["Title"] = UiText.T(Context, "ClassRoom");
+}
+
+<div class="card">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+            <div>
+                <h1 class="h3 mb-1">@UiText.T(Context, "ClassRoom")</h1>
+                <p class="text-secondary mb-0">@Model.StartTime.ToLocalTime().ToString("dd/MM/yyyy HH:mm") - @Model.EndTime.ToLocalTime().ToString("HH:mm")</p>
+            </div>
+            <span class="badge text-bg-success">@UiText.T(Context, Model.Status.ToString())</span>
+        </div>
+
+        <div class="ratio ratio-16x9 bg-black rounded-3 border border-secondary-subtle d-flex align-items-center justify-content-center">
+            <div class="text-center p-4">
+                <div class="display-6 mb-2">@UiText.T(Context, "ClassRoomTitle")</div>
+                <p class="text-secondary mb-3">@UiText.T(Context, "RoomCode"): @Model.MeetingRoomId</p>
+                <a class="btn btn-primary" href="https://meet.jit.si/@Model.MeetingRoomId" target="_blank" rel="noopener">@UiText.T(Context, "OpenMeetingLink")</a>
+            </div>
+        </div>
+    </div>
+</div>

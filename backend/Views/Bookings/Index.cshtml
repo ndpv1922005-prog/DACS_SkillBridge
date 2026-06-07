@@ -1,0 +1,448 @@
+@model BookingListViewModel
+@{
+    ViewData["Title"] = UiText.T(Context, "LessonsProgress");
+    var underReviewIds = (Model.UnderReviewBookingIds ?? Enumerable.Empty<Guid>()).ToHashSet();
+    var reviewedBookingIds = (Model.ReviewedBookingIds ?? Enumerable.Empty<Guid>()).ToHashSet();
+    var successMessage = TempData["Success"] as string;
+    var bookings = Model.Bookings
+        .GroupBy(booking => booking.Id)
+        .Select(group => group.First())
+        .OrderByDescending(booking => booking.StartTime)
+        .ToList();
+    var registeredTeachers = bookings
+        .GroupBy(booking => booking.TeacherId)
+        .Select(group => new
+        {
+            TeacherId = group.Key,
+            Teacher = Model.Teachers.FirstOrDefault(teacher => teacher.UserId == group.Key),
+            Bookings = group.OrderByDescending(booking => booking.StartTime).ToList()
+        })
+        .OrderBy(group => group.Teacher?.Name ?? "")
+        .ToList();
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="toast align-items-center show skillbridge-toast" role="status" aria-live="polite" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">@successMessage</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+            <div>
+                <h1 class="h3 mb-1">@UiText.T(Context, "LessonsProgress")</h1>
+                <p class="text-secondary mb-0">@UiText.T(Context, "LessonsProgressText")</p>
+            </div>
+            <a asp-controller="Teachers" asp-action="Index" class="btn lesson-action-btn">@UiText.T(Context, "FindTeacherCta")</a>
+        </div>
+
+        @if (Model.CurrentUserId is null)
+        {
+            <div class="alert alert-warning">@UiText.T(Context, "NeedLoginBookings")</div>
+        }
+        else if (!bookings.Any())
+        {
+            <div class="empty-state">@UiText.T(Context, "NoBookings")</div>
+        }
+        else
+        {
+            <section class="registered-teachers-panel mb-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">@UiText.T(Context, "RegisteredTeachers")</h2>
+                        <p class="text-secondary mb-0">@UiText.T(Context, "RegisteredTeachersText")</p>
+                    </div>
+                </div>
+
+                <div class="registered-teacher-grid">
+                    @foreach (var teacherGroup in registeredTeachers)
+                    {
+                        var teacher = teacherGroup.Teacher;
+                        var teacherBookings = teacherGroup.Bookings;
+                        var completedCount = teacherBookings.Count(booking => booking.Status == BookingStatus.Completed || (booking.StudentCompleted && booking.TeacherCompleted));
+                        var registeredCount = teacherBookings.Count;
+                        var teacherPrice = teacher?.PricePerSession ?? 0;
+                        var paidAmount = teacherBookings
+                            .Where(booking => booking.Status is BookingStatus.Completed or BookingStatus.Paid or BookingStatus.InProgress)
+                            .Sum(_ => teacherPrice);
+                        var heldAmount = teacherBookings
+                            .Where(booking => booking.Status is BookingStatus.Paid or BookingStatus.InProgress)
+                            .Sum(_ => teacherPrice);
+                        var hasDispute = teacherBookings.Any(booking => underReviewIds.Contains(booking.Id));
+                        var teacherStatus = hasDispute
+                            ? UiText.T(Context, "TeacherDisputeStatus")
+                            : completedCount == registeredCount
+                                ? UiText.T(Context, "Completed")
+                                : UiText.T(Context, "InProgress");
+                        var detailModalId = $"registered-teacher-{teacherGroup.TeacherId:N}";
+
+                        <article class="registered-teacher-card">
+                            <div class="registered-teacher-card-head">
+                                <div>
+                                    <h3 class="h5 mb-1">@(teacher?.Name ?? UiText.T(Context, "Teacher"))</h3>
+                                    <p class="text-secondary mb-0">@(teacher?.Skill ?? UiText.T(Context, "TeachingSkill"))</p>
+                                </div>
+                                <span class="badge text-bg-info">@(teacher is null ? UiText.T(Context, "LearningMode") : UiText.T(Context, teacher.TeachingMode.ToString()))</span>
+                            </div>
+
+                            <div class="registered-teacher-metrics">
+                                <div><span>@UiText.T(Context, "RegisteredSessionCount")</span><strong>@registeredCount</strong></div>
+                                <div><span>@UiText.T(Context, "CompletedSessions")</span><strong>@completedCount</strong></div>
+                                <div><span>@UiText.T(Context, "TotalPaidByTeacher")</span><strong>@paidAmount.ToString("N0")đ</strong></div>
+                                <div><span>@UiText.T(Context, "HeldMoney")</span><strong>@heldAmount.ToString("N0")đ</strong></div>
+                            </div>
+
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <span class="badge @(hasDispute ? "text-bg-warning" : "text-bg-success")">@teacherStatus</span>
+                                <button class="btn btn-sm lesson-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#@detailModalId">@UiText.T(Context, "ViewDetails")</button>
+                            </div>
+                        </article>
+
+                        <div class="modal fade registered-teacher-detail-modal" id="@detailModalId" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog registered-teacher-dialog modal-dialog-centered modal-dialog-scrollable">
+                                <div class="modal-content registered-teacher-modal">
+                                    <div class="modal-header border-secondary-subtle">
+                                        <div>
+                                            <h2 class="modal-title h5">@(teacher?.Name ?? UiText.T(Context, "Teacher"))</h2>
+                                            <p class="text-secondary small mb-0">@(teacher?.Skill ?? UiText.T(Context, "TeachingSkill"))</p>
+                                        </div>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-dark table-hover align-middle student-lessons-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>@UiText.T(Context, "Date")</th>
+                                                        <th>@UiText.T(Context, "LessonContent")</th>
+                                                        <th>@UiText.T(Context, "LearningMode")</th>
+                                                        <th>@UiText.T(Context, "Amount")</th>
+                                                        <th>@UiText.T(Context, "LearningStatus")</th>
+                                                        <th>@UiText.T(Context, "PaymentStatus")</th>
+                                                        <th class="text-end">@UiText.T(Context, "Action")</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var booking in teacherBookings)
+                                                    {
+                                                        var isUnderReview = underReviewIds.Contains(booking.Id);
+                                                        var statusLabel = isUnderReview
+                                                            ? UiText.T(Context, "UnderReviewStatus")
+                                                            : StudentLessonStatus(booking);
+                                                        var paymentStatus = booking.Status == BookingStatus.Refunded
+                                                            ? "Refunded"
+                                                            : booking.Status == BookingStatus.Completed
+                                                                ? "PaidStatus"
+                                                                : booking.Status is BookingStatus.Paid or BookingStatus.InProgress
+                                                                    ? "HeldMoney"
+                                                                    : "UnpaidStatus";
+                                                        var complaintModalId = $"complaint-{booking.Id:N}";
+                                                        var canReview = booking.Status == BookingStatus.Completed || (booking.StudentCompleted && booking.TeacherCompleted);
+                                                        var hasReviewed = reviewedBookingIds.Contains(booking.Id);
+
+                                                        <tr>
+                                                            <td>@booking.StartTime.ToLocalTime().ToString("dddd, dd/MM/yyyy HH:mm") - @booking.EndTime.ToLocalTime().ToString("HH:mm")</td>
+                                                            <td>@(string.IsNullOrWhiteSpace(booking.LessonContent) ? UiText.T(Context, "DefaultLessonContent") : booking.LessonContent)</td>
+                                                            <td>
+                                                                <span class="badge text-bg-info">@UiText.T(Context, booking.TeachingMode.ToString())</span>
+                                                                @if (booking.TeachingMode is TeachingMode.Offline or TeachingMode.Hybrid)
+                                                                {
+                                                                    <div class="text-secondary small">@(!string.IsNullOrWhiteSpace(booking.OfflineLocation) ? booking.OfflineLocation : teacher?.OfflineLocation)</div>
+                                                                }
+                                                            </td>
+                                                            <td>@teacherPrice.ToString("N0")đ</td>
+                                                            <td><span class="badge text-bg-success">@statusLabel</span></td>
+                                                            <td><span class="badge text-bg-info">@UiText.T(Context, paymentStatus)</span></td>
+                                                            <td class="text-end">
+                                                                <div class="lesson-actions justify-content-end">
+                                                                    @if ((booking.TeachingMode is TeachingMode.Online or TeachingMode.Hybrid) && (booking.Status is BookingStatus.Paid or BookingStatus.InProgress))
+                                                                    {
+                                                                        if (booking.StudentCompleted)
+                                                                        {
+                                                                            <button class="btn btn-sm lesson-action-btn" type="button" disabled>@UiText.T(Context, "JoinClass")</button>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <a asp-action="Room" asp-route-id="@booking.Id" class="btn btn-sm lesson-action-btn">@UiText.T(Context, "JoinClass")</a>
+                                                                        }
+                                                                    }
+                                                                    @if (booking.Status is BookingStatus.Paid or BookingStatus.InProgress)
+                                                                    {
+                                                                        <form asp-action="Complete" method="post" class="d-inline">
+                                                                            @Html.AntiForgeryToken()
+                                                                            <input type="hidden" name="id" value="@booking.Id" />
+                                                                            <button class="btn btn-sm lesson-action-btn" disabled="@(booking.StudentCompleted || isUnderReview)">@UiText.T(Context, "Confirmed")</button>
+                                                                        </form>
+                                                                        <button class="btn btn-sm lesson-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#@complaintModalId">@UiText.T(Context, "Complaint")</button>
+                                                                    }
+                                                                    @if (canReview)
+                                                                    {
+                                                                        if (hasReviewed)
+                                                                        {
+                                                                            <span class="badge text-bg-success">Đã đánh giá</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <button class="btn btn-sm lesson-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#review-@booking.Id.ToString("N")">Đánh giá giáo viên</button>
+                                                                        }
+                                                                    }
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                <div>
+                    <h2 class="h4 mb-1">@UiText.T(Context, "LessonsProgress")</h2>
+                    <p class="text-secondary mb-0">@UiText.T(Context, "LessonsProgressText")</p>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle student-lessons-table">
+                    <thead>
+                        <tr>
+                            <th>@UiText.T(Context, "TeacherName")</th>
+                            <th>@UiText.T(Context, "LessonContent")</th>
+                            <th>@UiText.T(Context, "LearningMode")</th>
+                            <th>@UiText.T(Context, "Time")</th>
+                            <th>@UiText.T(Context, "LearningStatus")</th>
+                            <th class="text-end">@UiText.T(Context, "Progress") / @UiText.T(Context, "Action")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var booking in bookings)
+                    {
+                        var teacher = Model.Teachers.FirstOrDefault(t => t.UserId == booking.TeacherId);
+                        var latestRequest = Model.ScheduleChangeRequests
+                            .Where(request => request.BookingId == booking.Id)
+                            .OrderByDescending(request => request.CreatedAt)
+                            .FirstOrDefault();
+                        var canRequestChange = booking.StartTime.ToLocalTime() - DateTimeOffset.Now >= TimeSpan.FromDays(2)
+                            && booking.Status is BookingStatus.Pending or BookingStatus.Confirmed or BookingStatus.Paid;
+                        var isUnderReview = underReviewIds.Contains(booking.Id);
+                        var statusLabel = isUnderReview
+                            ? UiText.T(Context, "UnderReviewStatus")
+                            : StudentLessonStatus(booking);
+                        var progressPercent = booking.Status == BookingStatus.Completed || (booking.StudentCompleted && booking.TeacherCompleted)
+                            ? 100
+                            : booking.StudentCompleted || booking.TeacherCompleted
+                                ? 75
+                                : booking.Status is BookingStatus.Paid or BookingStatus.InProgress
+                                    ? 50
+                                    : booking.Status == BookingStatus.Confirmed
+                                        ? 30
+                                        : 10;
+                        var reviewModalId = $"review-{booking.Id:N}";
+                        var canReview = booking.Status == BookingStatus.Completed || (booking.StudentCompleted && booking.TeacherCompleted);
+                        var hasReviewed = reviewedBookingIds.Contains(booking.Id);
+                        <tr>
+                            <td>
+                                <strong>@(teacher?.Name ?? UiText.T(Context, "Teacher"))</strong>
+                                @if (latestRequest is not null)
+                                {
+                                    var requestLabel = latestRequest.Status switch
+                                    {
+                                        ScheduleChangeStatus.Accepted => UiText.T(Context, "ScheduleAccepted"),
+                                        ScheduleChangeStatus.Rejected => UiText.T(Context, "ScheduleRejected"),
+                                        _ => UiText.T(Context, "SchedulePendingTeacher")
+                                    };
+                                    <div class="text-secondary small">@requestLabel</div>
+                                }
+                            </td>
+                            <td>@(string.IsNullOrWhiteSpace(booking.LessonContent) ? UiText.T(Context, "DefaultLessonContent") : booking.LessonContent)</td>
+                            <td>
+                                <span class="badge text-bg-info">@UiText.T(Context, booking.TeachingMode.ToString())</span>
+                                @if (booking.TeachingMode is TeachingMode.Offline or TeachingMode.Hybrid)
+                                {
+                                    <div class="text-secondary small">@(!string.IsNullOrWhiteSpace(booking.OfflineLocation) ? booking.OfflineLocation : teacher?.OfflineLocation)</div>
+                                }
+                            </td>
+                            <td>@booking.StartTime.ToLocalTime().ToString("dddd, dd/MM/yyyy HH:mm") - @booking.EndTime.ToLocalTime().ToString("HH:mm")</td>
+                            <td><span class="badge text-bg-success">@statusLabel</span></td>
+                            <td class="text-end">
+                                <div class="lesson-progress-actions">
+                                    <div class="lesson-progress-compact">
+                                        <div class="progress compact-progress" role="progressbar" aria-valuenow="@progressPercent" aria-valuemin="0" aria-valuemax="100">
+                                            <div class="progress-bar" style="width: @progressPercent%"></div>
+                                        </div>
+                                        <span>@progressPercent%</span>
+                                    </div>
+                                    <div class="lesson-actions justify-content-end">
+                                    @if (booking.Status == BookingStatus.Confirmed)
+                                    {
+                                        <form asp-action="Pay" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@booking.Id" />
+                                            <input type="hidden" name="method" value="Ví SkillBridge" />
+                                            <button class="btn btn-sm lesson-action-btn">@UiText.T(Context, "Pay")</button>
+                                        </form>
+                                    }
+                                    @if ((booking.TeachingMode is TeachingMode.Online or TeachingMode.Hybrid) && (booking.Status is BookingStatus.Paid or BookingStatus.InProgress))
+                                    {
+                                        if (booking.StudentCompleted)
+                                        {
+                                            <button class="btn btn-sm lesson-action-btn" type="button" disabled>@UiText.T(Context, "JoinClass")</button>
+                                        }
+                                        else
+                                        {
+                                            <a asp-action="Room" asp-route-id="@booking.Id" class="btn btn-sm lesson-action-btn">@UiText.T(Context, "JoinClass")</a>
+                                        }
+                                    }
+                                    @if (booking.Status is BookingStatus.Paid or BookingStatus.InProgress)
+                                    {
+                                        <form asp-action="Complete" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@booking.Id" />
+                                            <button class="btn btn-sm lesson-action-btn" disabled="@(booking.StudentCompleted || isUnderReview)">@UiText.T(Context, "Confirmed")</button>
+                                        </form>
+                                        var complaintModalId = $"complaint-{booking.Id:N}";
+                                        <button class="btn btn-sm lesson-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#@complaintModalId">@UiText.T(Context, "Complaint")</button>
+                                        <div class="modal fade" id="@complaintModalId" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-dialog-centered">
+                                                <div class="modal-content complaint-modal">
+                                                    <form asp-action="Dispute" method="post" enctype="multipart/form-data">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id" value="@booking.Id" />
+                                                        <div class="modal-header border-secondary-subtle">
+                                                            <div>
+                                                                <h2 class="modal-title h5">@UiText.T(Context, "Complaint")</h2>
+                                                                <p class="text-secondary small mb-0">@UiText.T(Context, "DisputeReason")</p>
+                                                            </div>
+                                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body vstack gap-3 text-start">
+                                                            <label class="form-label mb-0">@UiText.T(Context, "DisputeReason")</label>
+                                                            <select class="form-select" name="reason" data-complaint-reason>
+                                                                <option value="Chưa được học">Chưa được học</option>
+                                                                <option value="Giáo viên không tham gia buổi học">Giáo viên không tham gia buổi học</option>
+                                                                <option value="Giáo viên dạy không đủ thời lượng">Giáo viên dạy không đủ thời lượng</option>
+                                                                <option value="Nội dung dạy không đúng như đăng ký">Nội dung dạy không đúng như đăng ký</option>
+                                                                <option value="Chất lượng buổi học không đạt">Chất lượng buổi học không đạt</option>
+                                                                <option value="Khác">Khác</option>
+                                                            </select>
+                                                            <textarea class="form-control d-none" name="otherReason" rows="4" data-complaint-other placeholder="@UiText.T(Context, "DisputeReason")"></textarea>
+                                                            <label class="form-label mb-0">Bằng chứng hình ảnh</label>
+                                                            <input class="form-control" type="file" name="evidenceFile" accept="image/*" />
+                                                        </div>
+                                                        <div class="modal-footer border-secondary-subtle">
+                                                            <button type="button" class="btn lesson-action-btn" data-bs-dismiss="modal">Hủy</button>
+                                                            <button class="btn lesson-action-btn" type="submit">@UiText.T(Context, "Complaint")</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (canReview)
+                                    {
+                                        if (hasReviewed)
+                                        {
+                                            <span class="badge text-bg-success">Đã đánh giá</span>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm lesson-action-btn" type="button" data-bs-toggle="modal" data-bs-target="#@reviewModalId">Đánh giá giáo viên</button>
+                                            <div class="modal fade" id="@reviewModalId" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content complaint-modal">
+                                                        <form asp-action="Review" method="post">
+                                                            @Html.AntiForgeryToken()
+                                                            <input type="hidden" name="id" value="@booking.Id" />
+                                                            <div class="modal-header border-secondary-subtle">
+                                                                <div>
+                                                                    <h2 class="modal-title h5">Đánh giá giáo viên</h2>
+                                                                    <p class="text-secondary small mb-0">Chọn số sao và nhập bình luận cho buổi học này.</p>
+                                                                </div>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body vstack gap-3 text-start">
+                                                                <label class="form-label mb-0">Số sao</label>
+                                                                <select class="form-select" name="stars" required>
+                                                                    <option value="5">5 sao</option>
+                                                                    <option value="4">4 sao</option>
+                                                                    <option value="3">3 sao</option>
+                                                                    <option value="2">2 sao</option>
+                                                                    <option value="1">1 sao</option>
+                                                                </select>
+                                                                <label class="form-label mb-0">Bình luận</label>
+                                                                <textarea class="form-control" name="comment" rows="4" maxlength="1000" placeholder="Nhập nhận xét của bạn..."></textarea>
+                                                            </div>
+                                                            <div class="modal-footer border-secondary-subtle">
+                                                                <button type="button" class="btn lesson-action-btn" data-bs-dismiss="modal">Hủy</button>
+                                                                <button class="btn lesson-action-btn" type="submit">Gửi đánh giá</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                    </div>
+                                </div>
+                                @if (canRequestChange)
+                                {
+                                    <div class="mt-2 d-flex flex-wrap justify-content-end gap-2">
+                                        <form asp-action="RequestScheduleChange" method="post" class="d-inline-flex gap-1">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@booking.Id" />
+                                            <input type="hidden" name="type" value="Reschedule" />
+                                            <input class="form-control form-control-sm" type="datetime-local" name="requestedStartTime" value="@booking.StartTime.ToLocalTime().AddDays(1).ToString("yyyy-MM-ddTHH:mm")" />
+                                            <input type="hidden" name="reason" value="@UiText.T(Context, "StudentRescheduleReason")" />
+                                            <button class="btn btn-sm lesson-action-btn">@UiText.T(Context, "Reschedule")</button>
+                                        </form>
+                                        <form asp-action="RequestScheduleChange" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@booking.Id" />
+                                            <input type="hidden" name="type" value="Cancel" />
+                                            <input type="hidden" name="reason" value="@UiText.T(Context, "StudentCancelReason")" />
+                                            <button class="btn btn-sm lesson-action-btn">@UiText.T(Context, "RequestCancel")</button>
+                                        </form>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@functions {
+    private string StudentLessonStatus(Booking booking)
+    {
+        if (booking.Status == BookingStatus.Completed || (booking.StudentCompleted && booking.TeacherCompleted))
+        {
+            return UiText.T(Context, "Completed");
+        }
+
+        if (booking.StudentCompleted || booking.TeacherCompleted)
+        {
+            return UiText.T(Context, "WaitingOtherSide");
+        }
+
+        if (booking.Status is BookingStatus.Paid or BookingStatus.InProgress)
+        {
+            return UiText.T(Context, "InProgress");
+        }
+
+        return UiText.T(Context, booking.Status.ToString());
+    }
+}

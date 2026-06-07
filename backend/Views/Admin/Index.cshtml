@@ -1,0 +1,266 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Bảng điều khiển Admin";
+}
+
+<div class="teacher-shell admin-shell">
+    <aside class="teacher-sidebar">
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <img class="avatar" src="https://api.dicebear.com/8.x/initials/svg?seed=Admin" alt="Admin" />
+            <div>
+                <strong>Admin SkillBridge</strong>
+                <div class="text-secondary small">Quản trị nội bộ</div>
+            </div>
+        </div>
+        <nav class="d-grid gap-2">
+            <a href="#overview" class="teacher-side-link">Tổng quan</a>
+            <a href="#complaints" class="teacher-side-link">Quản lý khiếu nại</a>
+            <a href="#users" class="teacher-side-link">Quản lý người dùng</a>
+            <a href="#transactions" class="teacher-side-link">Giao dịch hệ thống</a>
+            <a href="#support" class="teacher-side-link">Hỗ trợ người dùng</a>
+        </nav>
+    </aside>
+
+    <section class="teacher-main">
+        @if (!string.IsNullOrWhiteSpace(Model.Success))
+        {
+            <div class="alert alert-success">@Model.Success</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.Error))
+        {
+            <div class="alert alert-danger">@Model.Error</div>
+        }
+
+        <div id="overview" class="card mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4">
+                    <div>
+                        <h1 class="h3 mb-1">Bảng điều khiển Admin</h1>
+                        <p class="text-secondary mb-0">Theo dõi tổng quan hệ thống, khiếu nại, người dùng và hỗ trợ.</p>
+                    </div>
+                    <span class="badge text-bg-info">Admin nội bộ</span>
+                </div>
+                <div class="admin-stat-grid">
+                    <div class="stat-card p-3"><span>Tổng học sinh</span><strong>@Model.TotalStudents</strong></div>
+                    <div class="stat-card p-3"><span>Tổng giáo viên</span><strong>@Model.TotalTeachers</strong></div>
+                    <div class="stat-card p-3"><span>Tổng buổi học</span><strong>@Model.TotalBookings</strong></div>
+                    <div class="stat-card p-3"><span>Tổng giao dịch</span><strong>@Model.TotalTransactions</strong></div>
+                    <div class="stat-card p-3"><span>Hoa hồng hệ thống</span><strong>@Model.SystemCommission.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>Khiếu nại đang xử lý</span><strong>@Model.PendingComplaints</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="complaints" class="card mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">Quản lý khiếu nại</h2>
+                        <p class="text-secondary mb-0">Admin chỉ xử lý khiếu nại. Thanh toán thường và hoàn thành buổi học vẫn do hệ thống tự xử lý.</p>
+                    </div>
+                    <span class="badge text-bg-warning">Quy tắc 7 ngày: không phản hồi sẽ hoàn tiền</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover align-middle admin-table">
+                        <thead>
+                            <tr>
+                                <th>Học sinh</th>
+                                <th>Giáo viên</th>
+                                <th>Buổi học</th>
+                                <th>Số tiền</th>
+                                <th>Lý do / bằng chứng</th>
+                                <th>Phản hồi giáo viên</th>
+                                <th>Trạng thái</th>
+                                <th class="text-end">Xử lý</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var complaint in Model.Complaints)
+                        {
+                            <tr>
+                                <td>@complaint.StudentName</td>
+                                <td>@complaint.TeacherName</td>
+                                <td>
+                                    <strong>@complaint.LessonContent</strong>
+                                    <div class="text-secondary small">@complaint.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                                </td>
+                                <td>@complaint.Amount.ToString("N0")đ</td>
+                                <td>
+                                    <div>@complaint.Reason</div>
+                                    @if (!string.IsNullOrWhiteSpace(complaint.StudentEvidenceUrl))
+                                    {
+                                        <a class="auth-link small" href="@complaint.StudentEvidenceUrl" target="_blank">Xem bằng chứng học sinh</a>
+                                    }
+                                </td>
+                                <td>
+                                    @if (string.IsNullOrWhiteSpace(complaint.TeacherResponse))
+                                    {
+                                        <span class="text-secondary small">Chưa có phản hồi</span>
+                                    }
+                                    else
+                                    {
+                                        <div>@complaint.TeacherResponse</div>
+                                        @if (!string.IsNullOrWhiteSpace(complaint.TeacherEvidenceUrl))
+                                        {
+                                            <a class="auth-link small" href="@complaint.TeacherEvidenceUrl" target="_blank">Xem bằng chứng giáo viên</a>
+                                        }
+                                    }
+                                    @if (complaint.IsAutoRefundDue)
+                                    {
+                                        <div class="badge text-bg-warning mt-2">Đủ điều kiện tự hoàn tiền</div>
+                                    }
+                                </td>
+                                <td><span class="badge text-bg-info">@ComplaintStatusLabel(complaint.Status)</span></td>
+                                <td class="text-end">
+                                    <div class="lesson-actions justify-content-end">
+                                        <form asp-action="ResolveComplaint" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@complaint.Id" />
+                                            <input type="hidden" name="decision" value="Refund" />
+                                            <button class="btn btn-sm lesson-action-btn">Hoàn tiền cho học sinh</button>
+                                        </form>
+                                        <form asp-action="ResolveComplaint" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@complaint.Id" />
+                                            <input type="hidden" name="decision" value="Release" />
+                                            <button class="btn btn-sm lesson-action-btn">Trả tiền cho giáo viên</button>
+                                        </form>
+                                        <form asp-action="ResolveComplaint" method="post">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@complaint.Id" />
+                                            <input type="hidden" name="decision" value="Review" />
+                                            <button class="btn btn-sm lesson-action-btn">Cần xem xét thêm</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+                @if (!Model.Complaints.Any())
+                {
+                    <div class="empty-state">Chưa có khiếu nại nào.</div>
+                }
+            </div>
+        </div>
+
+        <div id="users" class="card mb-4">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-3">Quản lý người dùng</h2>
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <h3 class="h5">Học sinh</h3>
+                        @foreach (var user in Model.Students)
+                        {
+                            <div class="admin-user-row">
+                                <div>
+                                    <strong>@user.Name</strong>
+                                    <div class="text-secondary small">@user.Email</div>
+                                </div>
+                                @if (user.IsLocked)
+                                {
+                                    <form asp-action="UnlockUser" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <button class="btn btn-sm lesson-action-btn">Mở khóa</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="LockUser" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <button class="btn btn-sm lesson-action-btn">Khóa tài khoản</button>
+                                    </form>
+                                }
+                            </div>
+                        }
+                    </div>
+                    <div class="col-lg-6">
+                        <h3 class="h5">Giáo viên</h3>
+                        @foreach (var user in Model.Teachers)
+                        {
+                            <div class="admin-user-row">
+                                <div>
+                                    <strong>@user.Name</strong>
+                                    <div class="text-secondary small">@user.Email</div>
+                                </div>
+                                @if (user.IsLocked)
+                                {
+                                    <form asp-action="UnlockUser" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <button class="btn btn-sm lesson-action-btn">Mở khóa</button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <form asp-action="LockUser" method="post" class="m-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@user.Id" />
+                                        <button class="btn btn-sm lesson-action-btn">Khóa tài khoản</button>
+                                    </form>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="transactions" class="card mb-4">
+            <div class="card-body p-4">
+                <h2 class="h4 mb-3">Giao dịch hệ thống</h2>
+                <div class="payment-stat-grid">
+                    <div class="stat-card p-3"><span>Tiền đang giữ</span><strong>@Model.Transactions.Held.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>Tiền đã trả giáo viên</span><strong>@Model.Transactions.Released.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>Tiền đã hoàn học sinh</span><strong>@Model.Transactions.Refunded.ToString("N0")đ</strong></div>
+                    <div class="stat-card p-3"><span>Hoa hồng nền tảng</span><strong>@Model.Transactions.Commission.ToString("N0")đ</strong></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="support" class="card">
+            <div class="card-body p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                    <div>
+                        <h2 class="h4 mb-1">Hỗ trợ người dùng</h2>
+                        <p class="text-secondary mb-0">Dùng chung hệ thống chat hiện tại, không cần realtime phức tạp riêng.</p>
+                    </div>
+                    <a class="btn lesson-action-btn" asp-controller="Chat" asp-action="Index" asp-route-role="Admin">Mở hộp thư hỗ trợ</a>
+                </div>
+                @foreach (var contact in Model.SupportContacts)
+                {
+                    <a class="admin-support-row" asp-controller="Chat" asp-action="Index" asp-route-role="Admin" asp-route-contactId="@contact.UserId">
+                        <img class="avatar" src="@contact.AvatarUrl" alt="@contact.Name" />
+                        <span>
+                            <strong>@contact.Name</strong>
+                            <small>@contact.RoleLabel - @contact.LastMessage</small>
+                        </span>
+                        @if (contact.UnreadCount > 0)
+                        {
+                            <span class="chat-contact-unread">@contact.UnreadCount</span>
+                        }
+                    </a>
+                }
+                @if (!Model.SupportContacts.Any())
+                {
+                    <div class="empty-state">Chưa có tin nhắn hỗ trợ.</div>
+                }
+            </div>
+        </div>
+    </section>
+</div>
+
+@functions {
+    private string ComplaintStatusLabel(ComplaintStatus status) => status switch
+    {
+        ComplaintStatus.WaitingTeacherResponse => "Đang chờ phản hồi",
+        ComplaintStatus.InReview => "Đang xử lý",
+        ComplaintStatus.Refunded => "Đã hoàn tiền",
+        ComplaintStatus.ReleasedToTeacher => "Đã trả giáo viên",
+        ComplaintStatus.Closed => "Đóng khiếu nại",
+        _ => status.ToString()
+    };
+}
